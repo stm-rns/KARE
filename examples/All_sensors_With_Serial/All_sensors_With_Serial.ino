@@ -1,0 +1,232 @@
+// Pour les capteurs I2C
+#include <Wire.h>
+#include <HTS221.h> // temperature and humidity sensor
+#include <LPS25H.h> //Pressure sensor
+#include <Adafruit_LIS3DH.h>
+#include <Adafruit_Sensor.h>
+
+// SPI
+#include <SPI.h>
+// Pour l'afficheur
+#include <MD_Parola.h>
+#include <MD_MAX72xx.h>
+
+// I2C
+Adafruit_LIS3DH lis = Adafruit_LIS3DH();
+
+// Adjust this number for the sensitivity of the 'click' force
+// this strongly depend on the range! for 16G, try 5-10
+// for 8G, try 10-20. for 4G try 20-40. for 2G try 40-80
+#define CLICKTHRESHHOLD 80
+
+// Pour l'afficheur
+#include <MD_Parola.h>
+#include <MD_MAX72xx.h>
+
+// Définition de l'afficheur: nombre d'afficheur et broches nécessaires
+#define HARDWARE_TYPE MD_MAX72XX::FC16_HW
+#define MAX_DEVICES 4
+#define CLK_PIN   13
+#define DATA_PIN  11
+#define CS_PIN    10
+
+// Hardware SPI connection
+MD_Parola P = MD_Parola(HARDWARE_TYPE, CS_PIN, MAX_DEVICES);
+
+// LED Matrix parameters
+uint8_t scrollSpeed = 50;    // default frame delay value
+textEffect_t scrollEffect = PA_SCROLL_LEFT;
+textPosition_t scrollAlign = PA_LEFT;
+int brightness = 1; // 0 to 9
+uint16_t scrollPause = 2000; // in milliseconds
+#define  BUF_SIZE  75
+char Message[BUF_SIZE] = { "" };
+char inBuffer[256] = "This is a test !";
+
+// display parameters
+unsigned int pollingInterval = 1000; // in milliseconds
+int refreshCounter = 0;    // refresh counter
+int knockFilter = 0;      // knock filter is a counter used to filter fast knock
+int parameter = 0;        // Current parameter to display
+bool forceUpdate = true;    // Boolean to force the update of the display
+
+// Initialization
+void setup()
+{
+  // put your setup code here, to run once:
+  Serial.begin(115200);
+
+  // Display init
+  P.begin();
+  P.setZoneEffect(0, true, PA_FLIP_UD);
+  P.setZoneEffect(0, true, PA_FLIP_LR);
+  P.setTextEffect(scrollEffect, scrollEffect);
+  P.setIntensity(brightness);
+
+  Wire.begin();
+  if (!smeHumidity.begin()) {
+    while (1) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(500);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(500);
+    }
+  }
+  if (!smePressure.begin()) {
+    while (1) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(1000);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(1000);
+    }
+  }
+
+  if (!lis.begin(0x18)) {
+    Serial.println("Couldnt start");
+    while (1) {
+      digitalWrite(LED_BUILTIN, HIGH);
+      delay(2000);
+      digitalWrite(LED_BUILTIN, LOW);
+      delay(2000);
+    }
+  }
+  Serial.println("LIS3DH found!");
+  lis.setRange(LIS3DH_RANGE_2_G);   // 2, 4, 8 or 16 G!
+
+  Serial.print("Range = "); Serial.print(2 << lis.getRange());
+  Serial.println("G");
+
+  // 0 = turn off click detection & interrupt
+  // 1 = single click only interrupt output
+  // 2 = double click only interrupt output, detect single click
+  // Adjust threshhold, higher numbers are less sensitive
+  lis.setClick(2, CLICKTHRESHHOLD);
+  delay(pollingInterval);
+}
+
+void loop()
+{
+  // put your main code here, to run repeatedly:
+
+  // if the refresh counter is greater than 1000 and the DisplayAnimate equal true (the display is finished)
+  // or if we want to force the update (the user knocked)
+  if ((P.displayAnimate() == true && refreshCounter > 1000) || forceUpdate == true) // filter display in console, to give more time to knock detection
+  {
+    // ---------------------------------
+    // Read information from the sensors
+
+    // read the pressure and write it to the serial port
+    int pressure = smePressure.readPressure();
+    Serial.print("Pressure: ");
+    Serial.print(pressure);
+    Serial.print(" mbar");
+
+    // read the luminous flux and write it to the serial port
+    int light = analogRead(A1);
+    Serial.print("\t| Light: ");
+    Serial.print(light);
+
+    // read the temperature and write it to the serial port
+    double temperature = smeHumidity.readTemperature();
+    Serial.print("\t| Temperature: ");
+    Serial.print(temperature);
+    Serial.print(" celsius");
+
+    // Read the humidity and write it to the serial port
+    // The value is returned as a percentage of humidity (0 = dry desert, 100 = rain forests)
+    double humidity = smeHumidity.readHumidity();
+    Serial.print("\t| Humidity: ");
+    Serial.print(humidity);
+    Serial.print("% ");
+
+    // print the current parameter
+    Serial.printf("\t| Etape %i\n", parameter);
+
+    // ----------------------------------------------------------------------------------
+    // depending on the parameter, we will display selected information on the led matrix
+    switch (parameter) {
+      case 0: // if the parameter is 0, display the temperature on the led matrix
+        P.print(String(temperature, 1) + " C");
+        break;
+      case 1: // if the parameter is 1, display the humidity on the led matrix
+        P.print(String(humidity, 1) + " %");
+        break;
+      case 2: // if the parameter is 2, display the luminous flux on the led matrix
+        P.print(String(light) + " lum");
+        break;
+      case 3: // if the parameter is 3, display the pressure on the led matrix
+        P.print(String(pressure) + "mB");
+        break;
+      case 4: // display the inBuffer read from the serial port or the default buffer content
+        P.displayText(inBuffer, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+        P.displayReset();
+        break;
+      default: // if the parameter is different from previous value, display all the information on the led matrix
+        // format the string to display
+        Serial.printf("%d C %d %% %d lum %d mB\n", (int)temperature, (int)humidity, light, pressure);
+        P.displayText(Message, scrollAlign, scrollSpeed, scrollPause, scrollEffect, scrollEffect);
+        P.displayReset();
+        break;
+    }
+    forceUpdate = false;    // reset forceUpdate to false
+    refreshCounter = 0;     // reset the refresh counter
+  }
+
+
+  refreshCounter++;           // increment the refresh counter
+  knockFilter++;      // increment the click counter
+
+  // get the click information
+  uint8_t click = lis.getClick();
+
+  // if we have a click (or double click) and the knockFilter > 1000
+  // note that if the knockFilter is < 1000, the click will be ignore
+  if ((click & 0x10 || click & 0x20) && knockFilter > 1000)
+  {
+    knockFilter = 0;                // reset the knockFilter to 0
+    Serial.println("click !!");    // write the "click !!" message on the serial port
+    parameter++;                    // change the parameter to display to the next one
+    forceUpdate = true;             // force the update of the display on the led matrix
+    P.displayReset();
+  }
+
+  // If something available in the serial port, read from it
+  if (Serial.available() != 0) {
+    getline();
+    parameter = 4;
+    forceUpdate = true;
+  }
+
+  if (parameter > 5) // if the parameter is greater the last one, reset it
+    parameter = 0;
+
+  return;
+}
+
+// This function read caracters from the serial port
+void getline()
+{
+  uint8_t idx = 0; // buffer counter
+  char c; // current char
+  do {
+    while (Serial.available() == 0) ; // wait for a char this causes the blocking
+    c = Serial.read();   // read the char
+    inBuffer[idx++] = c; // set the char in the buffer and increment the buffer counter
+  } while (c != '\n' && c != '\r');
+
+  inBuffer[idx - 1] = 0;    // change the last char '\n' or '\r' to 0, which means end of line
+
+  Serial.println(inBuffer); // echo the read line
+
+  /* Optionaly, we can test the input string to make actions
+     This example set the intensity to MAX or MIN using
+     the serial command INT MAX or INT MIN (in uppercase)
+  */
+  if (strcmp(inBuffer, "INT MAX") == 0) {
+    P.setIntensity(10);
+  } else {
+    if (strcmp(inBuffer, "INT MIN") == 0) {
+      P.setIntensity(1);
+    }
+  }
+}
