@@ -4,8 +4,6 @@
 
 #include <Wire.h>            // Fichier d'interface pour linterface série I2C 
 #include <HTS221.h>          // Fichier d'interface pour le composant HTS221 (capteur température et humidité) de la carte des capteurs
-#include <LPS25H.h>          // Fichier d'interface pour le composant LP225H (capteur de pression)
-
 #include <Arduino.h>         // Fichier de définitions de déclarations Arduino 
 #include <Adafruit_Sensor.h> // Fichier de définition d'interfaces capteurs 
 
@@ -15,7 +13,6 @@
 
 double temperature;                  // variable pour la température 
 double humidity;                     // variable pour l'hygrométrie
-int    pression;                      // variable pour la pression 
 unsigned int pollingInterval = 1000; // Variable de temporisation (millisecondes)
 int compteur = 0;                    // Variable de comptage pour capture de la température 
 
@@ -39,7 +36,6 @@ void setup() {
   {
     digitalWrite(LED_BUILTIN, LOW);
   }
-  smePressure.begin();
 
   // Attente de la fin d'initialisation 
   delay(pollingInterval);  
@@ -54,19 +50,16 @@ void loop() {
   
   // Lecture de la température 
   temperature = smeHumidity.readTemperature();
-  Serial.print("Temperature: ");
+  Serial.print(" | Temperature: ");
   Serial.print(temperature);
+  delay(2000);
+
 
   // Lecture de l'hygrométrie 
   humidity = smeHumidity.readHumidity();
-  Serial.print("  Hygométrie (%): ");
-  Serial.print(humidity);
+  Serial.print(" | Hygométrie (%): ");
+  Serial.println(humidity);
 
-  // Lecture de la pression  
-  pression = smePressure.readPressure();
-  Serial.print("  Pression: ");
-  Serial.println(pression);
-  delay(1000);
 
   // Attente 
   delay(pollingInterval);   
