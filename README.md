@@ -1,1 +1,3 @@
 # KARE
+
+STMicroelectronics Rennes
