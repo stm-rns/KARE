@@ -13,5 +13,5 @@ while(True):
     # la fonction get du module lps récupère la température et la pression
     temp, press = lps.get()
     print("temperature: {}, pression: {}".format(temp, press))
-    delay(0.5)
+    delay(500)
 
