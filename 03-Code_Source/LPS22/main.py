@@ -1,5 +1,6 @@
 # main.py -- put your code here!
 from machine import I2C
+from pyb import delay
 import LPS22
 
 # Initialisation du port I2C(2)
