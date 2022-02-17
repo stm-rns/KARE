@@ -2,6 +2,8 @@
 from machine import Pin
 from pyb import delay
 
+pin_vpp = Pin('X4',Pin.OUT)
+pin_vpp.value(1)
 pin_x = Pin('X1')
 pin_y = Pin('X2')
 pin_key = Pin('X3')

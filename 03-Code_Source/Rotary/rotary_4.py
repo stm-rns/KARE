@@ -46,6 +46,8 @@ class Encoder:
 def myCallBack(p):
     s.position = 0
 
+pin_vpp = Pin('X4',Pin.OUT)
+pin_vpp.value(1)
 s = Encoder(Pin('X1'),Pin('X2'), # ==> signaux roue codeuse
                 Pin('X3'),myCallBack)    # ==> signal bouton et sa fonction    
 pos = -1

@@ -47,11 +47,14 @@ class Encoder:
             self.key_cb(line)
         
 def resetCallBack(p):
+    print("0")
     s.value = 0
 
 def printCallBack(p):
     print(s.value)
 
+pin_vpp = Pin('X4',Pin.OUT)
+pin_vpp.value(1)
 if 1:
     s = Encoder(Pin('X1'),Pin('X2'),printCallBack,  # ==> signaux roue codeuse
                 Pin('X3'),resetCallBack)            # ==> signal bouton et sa fonction

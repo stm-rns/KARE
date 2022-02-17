@@ -5,6 +5,7 @@ class Encoder:
     def __init__(self, pin_x, pin_y, pin_key=None,key_cb=None):
         self.pin_x = pin_x
         self.pin_y = pin_y
+        self.pin_key = pin_key
         self.position = 0
         self.key_cb = key_cb
         self.state = 0
@@ -51,6 +52,8 @@ class Encoder:
 def myCallBack(p):
     s.position = 0
 
+pin_vpp = Pin('X4',Pin.OUT)
+pin_vpp.value(1)
 s = Encoder(Pin('X1'),Pin('X2'), # ==> signaux roue codeuse
                 Pin('X3'),myCallBack)    # ==> signal bouton et sa fonction    
 pos = -1
